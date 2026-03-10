@@ -17,14 +17,14 @@ const socialLinks = [
 export function Footer() {
   return (
     <footer className="bg-black border-t border-[#C9A227]/20">
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-8">
+      <div className="max-w-8xl mx-auto px-6 py-12">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-8">
           {/* Logo */}
           <Link to="/">
             <img
-              src="/paquete_logotipos_med-core/Gráficos/Logo/Logo horizontal/Logo horizontal (blanco).svg"
+              src="/public/Logo/Logo horizontal/Logo horizontal (blanco).svg"
               alt="Med-Core"
-              className="h-8 w-auto"
+              className="h-15 w-auto"
             />
           </Link>
 
