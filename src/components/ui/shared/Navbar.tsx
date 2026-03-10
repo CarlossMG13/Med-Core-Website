@@ -1,17 +1,46 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
-
 import { AnimatePresence, motion } from "framer-motion";
 
 const anchorLinks = [
-  { label: "IA Demo", href: "/#ia-demo" },
-  { label: "Integraciones", href: "/#integraciones" },
-  { label: "Soluciones", href: "/#soluciones" },
+  { label: "IA Demo", id: "ia-demo" },
+  { label: "Integraciones", id: "integraciones" },
+  { label: "Soluciones", id: "soluciones" },
 ];
+
+function scrollToCenter(id: string) {
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  const navbarHeight = 80;
+  const elTop = el.getBoundingClientRect().top + window.pageYOffset;
+  const elHeight = el.offsetHeight;
+  const viewportHeight = window.innerHeight;
+
+  const centered = elTop - (viewportHeight - elHeight) / 2;
+  const fallback = elTop - navbarHeight - 40;
+
+  window.scrollTo({
+    top: elHeight > viewportHeight ? fallback : Math.max(0, centered),
+    behavior: "smooth",
+  });
+}
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleLink = (id: string) => {
+    setIsOpen(false);
+    if (location.pathname !== "/") {
+      navigate("/");
+      setTimeout(() => scrollToCenter(id), 300);
+    } else {
+      setTimeout(() => scrollToCenter(id), 50);
+    }
+  };
 
   return (
     <nav className="fixed w-full z-50 bg-black/80 backdrop-blur-xl border-b border-white/10">
@@ -29,13 +58,13 @@ export function Navbar() {
           {/* Nav Links + CTA — Desktop */}
           <div className="hidden md:flex items-center gap-2">
             {anchorLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="text-gray-300 hover:text-[#C9A227] transition px-3 py-2 text-sm font-medium"
+              <button
+                key={link.id}
+                onClick={() => handleLink(link.id)}
+                className="text-gray-300 cursor-pointer hover:text-[#C9A227] transition px-3 py-2 text-sm font-medium"
               >
                 {link.label}
-              </a>
+              </button>
             ))}
             <Link
               to="/pricing"
@@ -44,7 +73,7 @@ export function Navbar() {
               Pricing
             </Link>
             <a
-              href="https://app.med-core.com"
+              href="https://doc-app-anex.vercel.app/"
               target="_blank"
               rel="noreferrer"
               className="bg-[#C9A227] text-black hover:bg-[#C9A227]/90 px-5 py-2 rounded-full text-sm font-bold shadow-lg shadow-[#C9A227]/20 transition-all duration-300"
@@ -65,7 +94,6 @@ export function Navbar() {
       </div>
 
       {/* Mobile Menu */}
-
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -76,35 +104,31 @@ export function Navbar() {
             className="md:hidden overflow-hidden bg-black/95 border-t border-white/10"
           >
             <div className="px-4 pt-4 pb-6 flex flex-col gap-2">
-              <div className="md:hidden bg-black/95 border-t border-white/10 px-4 pt-4 pb-6 flex flex-col gap-2">
-                {anchorLinks.map((link) => (
-                  <a
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setIsOpen(false)}
-                    className="text-gray-300 hover:text-[#C9A227] transition px-3 py-2 text-sm font-medium rounded-md hover:bg-white/5"
-                  >
-                    {link.label}
-                  </a>
-                ))}
-                <Link
-                  to="/pricing"
-                  onClick={() => setIsOpen(false)}
-                  className="text-gray-300 hover:text-[#C9A227] transition px-3 py-2 text-sm font-medium rounded-md hover:bg-white/5"
+              {anchorLinks.map((link) => (
+                <button
+                  key={link.id}
+                  onClick={() => handleLink(link.id)}
+                  className="text-gray-300 hover:text-[#C9A227] transition px-3 py-2 text-sm font-medium rounded-md hover:bg-white/5 text-left"
                 >
-                  Pricing
-                </Link>
-
-                <div className="flex flex-col gap-3 mt-4 pt-4 border-t border-white/10">
-                  <a
-                    href="https://app.med-core.com"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="bg-[#C9A227] text-black hover:bg-[#C9A227]/90 px-5 py-2 rounded-full text-sm font-bold text-center shadow-lg shadow-[#C9A227]/20 transition-all duration-300"
-                  >
-                    Acceder al Dashboard
-                  </a>
-                </div>
+                  {link.label}
+                </button>
+              ))}
+              <Link
+                to="/pricing"
+                onClick={() => setIsOpen(false)}
+                className="text-gray-300 hover:text-[#C9A227] transition px-3 py-2 text-sm font-medium rounded-md hover:bg-white/5"
+              >
+                Pricing
+              </Link>
+              <div className="flex flex-col gap-3 mt-4 pt-4 border-t border-white/10">
+                <a
+                  href="https://doc-app-anex.vercel.app/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="bg-[#C9A227] text-black hover:bg-[#C9A227]/90 px-5 py-2 rounded-full text-sm font-bold text-center shadow-lg shadow-[#C9A227]/20 transition-all duration-300"
+                >
+                  Acceder al Dashboard
+                </a>
               </div>
             </div>
           </motion.div>

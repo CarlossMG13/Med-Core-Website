@@ -14,7 +14,8 @@ import doctorPhoto from "@/assets/doctor-pfp.jpg";
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 24 },
-  animate: { opacity: 1, y: 0 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: "-60px" },
   transition: { duration: 0.6, ease: "easeOut" as const, delay },
 });
 

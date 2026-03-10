@@ -46,7 +46,8 @@ const extractName = (input: string): string => {
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 24 },
-  animate: { opacity: 1, y: 0 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: "-60px" },
   transition: { duration: 0.6, ease: "easeOut" as const, delay },
 });
 
@@ -57,10 +58,13 @@ export function IaDemoSection() {
   const [input, setInput] = useState("");
   const [step, setStep] = useState<Step>("greeting");
   const [doctorName, setDoctorName] = useState("");
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
+    }
   }, [messages]);
 
   const handleSend = () => {
@@ -161,7 +165,10 @@ export function IaDemoSection() {
             </div>
 
             {/* Mensajes */}
-            <div className="h-80 overflow-y-auto px-4 py-4 flex flex-col gap-4 scrollbar-none">
+            <div
+              ref={messagesContainerRef}
+              className="h-80 overflow-y-auto px-4 py-4 flex flex-col gap-4 scrollbar-none"
+            >
               <AnimatePresence initial={false}>
                 {messages.map((msg) => (
                   <motion.div
@@ -213,8 +220,6 @@ export function IaDemoSection() {
                   </motion.div>
                 )}
               </AnimatePresence>
-
-              <div ref={bottomRef} />
             </div>
 
             {/* Input */}
