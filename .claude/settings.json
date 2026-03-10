@@ -2,6 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(git config --list)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\celso\\Documents\\Med-Core\\src"
     ]
   }
 }
