@@ -34,7 +34,7 @@ export function HeroSection() {
           transition={{ duration: 0.7, ease: "easeOut" }}
         >
           <img
-            src="/public/Isologo/Isologo.svg"
+            src="/Isologo/Isologo.svg"
             alt="Med-Core Emblem"
             className="w-full h-full object-contain drop-shadow-[0_0_25px_rgba(201,162,39,0.6)]"
           />

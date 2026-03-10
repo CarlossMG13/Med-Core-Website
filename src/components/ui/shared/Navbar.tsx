@@ -20,7 +20,7 @@ export function Navbar() {
           {/* Logo */}
           <Link to="/" className="flex items-center">
             <img
-              src="/public/Logo/Logo horizontal/Logo horizontal (blanco).svg"
+              src="/Logo/Logo horizontal/Logo horizontal (blanco).svg"
               alt="Med-Core"
               className="h-15 w-auto"
             />
