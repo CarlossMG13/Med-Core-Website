@@ -23,7 +23,7 @@ import juridicoImg from "../../assets/Juridico.JPG";
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 24 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.6, ease: "easeOut", delay },
+  transition: { duration: 0.6, ease: "easeOut" as const, delay },
 });
 
 const features = [
@@ -94,13 +94,13 @@ const slideVariants = {
     x: 0,
     opacity: 1,
     scale: 1,
-    transition: { duration: 0.4, ease: "easeOut" },
+    transition: { duration: 0.4, ease: "easeOut" as const },
   },
   exit: (dir: number) => ({
     x: dir < 0 ? 320 : -320,
     opacity: 0,
     scale: 0.92,
-    transition: { duration: 0.3, ease: "easeIn" },
+    transition: { duration: 0.3, ease: "easeIn" as const },
   }),
 };
 
