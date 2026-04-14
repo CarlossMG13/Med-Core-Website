@@ -58,24 +58,30 @@ export function IaDemoSection() {
   const [input, setInput] = useState("");
   const [step, setStep] = useState<Step>("greeting");
   const [doctorName, setDoctorName] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop =
         messagesContainerRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isTyping]);
 
-  const handleSend = () => {
-    const trimmed = input.trim();
+  const addAiMessage = (text: string, delay: number) => {
+    setIsTyping(true);
+    setTimeout(() => {
+      setIsTyping(false);
+      setMessages((prev) => [...prev, { id: prev.length, role: "ai", text }]);
+    }, delay);
+  };
+
+  const handleSend = (overrideText?: string) => {
+    const trimmed = (overrideText ?? input).trim();
     if (!trimmed) return;
 
-    const userMsg: Message = {
-      id: messages.length,
-      role: "user",
-      text: trimmed,
-    };
+    const userMsg: Message = { id: messages.length, role: "user", text: trimmed };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
 
@@ -83,28 +89,15 @@ export function IaDemoSection() {
       const name = extractName(trimmed);
       setDoctorName(name);
       setStep("waitingName");
-
-      setTimeout(() => {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: prev.length,
-            role: "ai",
-            text: `¡Hola Dr. ${name}! Soy su asistente MedCore. Estoy aquí para gestionar su agenda, registrar pacientes y proteger su práctica con respaldo legal en tiempo real — todo potenciado por IA. ¿En qué le puedo ayudar hoy?`,
-          },
-        ]);
-        setStep("done");
-      }, 900);
+      addAiMessage(
+        `¡Hola Dr. ${name}! Soy su asistente MedCore. Estoy aquí para gestionar su agenda, registrar pacientes y proteger su práctica con respaldo legal en tiempo real — todo potenciado por IA. ¿En qué le puedo ayudar hoy?`,
+        900
+      );
+      setStep("done");
     } else if (step === "done") {
       const matched = quickActionResponses[trimmed];
       const reply = matched ?? genericDemoResponse(doctorName);
-
-      setTimeout(() => {
-        setMessages((prev) => [
-          ...prev,
-          { id: prev.length, role: "ai", text: reply },
-        ]);
-      }, 700);
+      addAiMessage(reply, 700);
     }
   };
 
@@ -113,6 +106,7 @@ export function IaDemoSection() {
       {/* Grid background sutil */}
       <div
         className="absolute inset-0 pointer-events-none opacity-5"
+        aria-hidden="true"
         style={{
           backgroundImage:
             "linear-gradient(#C9A22720 1px, transparent 1px), linear-gradient(90deg, #C9A22720 1px, transparent 1px)",
@@ -121,7 +115,7 @@ export function IaDemoSection() {
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Header de sección */}
+        {/* Header */}
         <motion.div className="text-center mb-16" {...fadeUp(0)}>
           <span className="text-[#C9A227] font-bold tracking-widest uppercase text-xs mb-2 block">
             Inteligencia Artificial
@@ -141,14 +135,18 @@ export function IaDemoSection() {
         {/* Chat interactivo */}
         <motion.div className="relative max-w-lg mx-auto" {...fadeUp(0.2)}>
           {/* Glow border */}
-          <div className="absolute -inset-1 bg-gradient-to-r from-[#C9A227] via-white/10 to-[#C9A227] rounded-2xl blur opacity-20" />
+          <div className="absolute -inset-1 bg-gradient-to-r from-[#C9A227] via-white/10 to-[#C9A227] rounded-2xl blur opacity-20" aria-hidden="true" />
 
           {/* Modal shell */}
-          <div className="relative bg-[#1a1a1f] border border-[#C9A227]/20 rounded-2xl overflow-hidden shadow-2xl">
+          <div
+            className="relative bg-[#1a1a1f] border border-[#C9A227]/20 rounded-2xl overflow-hidden shadow-2xl"
+            role="region"
+            aria-label="Chat con asistente IA de MedCore"
+          >
             {/* Header del chat */}
             <div className="flex items-center gap-3 px-5 py-4 border-b border-white/5 bg-[#16161b]">
               <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#C9A227] to-amber-600 flex items-center justify-center shadow-[0_0_12px_rgba(201,162,39,0.4)]">
-                <Bot className="w-5 h-5 text-black" />
+                <Bot className="w-5 h-5 text-black" aria-hidden="true" />
               </div>
               <div>
                 <p className="text-white text-sm font-semibold leading-none">
@@ -158,8 +156,8 @@ export function IaDemoSection() {
                   IA · Gestión de agenda
                 </p>
               </div>
-              <div className="ml-auto flex items-center gap-1.5">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <div className="ml-auto flex items-center gap-1.5" aria-label="Estado: En línea">
+                <div className="w-2 h-2 bg-green-500 rounded-full" aria-hidden="true" />
                 <span className="text-xs text-green-400">En línea</span>
               </div>
             </div>
@@ -167,7 +165,10 @@ export function IaDemoSection() {
             {/* Mensajes */}
             <div
               ref={messagesContainerRef}
-              className="h-80 overflow-y-auto px-4 py-4 flex flex-col gap-4 scrollbar-none"
+              className="h-80 overflow-y-auto px-4 py-4 flex flex-col gap-4"
+              role="log"
+              aria-live="polite"
+              aria-label="Mensajes del chat"
             >
               <AnimatePresence initial={false}>
                 {messages.map((msg) => (
@@ -181,8 +182,8 @@ export function IaDemoSection() {
                     }`}
                   >
                     {msg.role === "ai" && (
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#C9A227] to-amber-600 flex items-center justify-center flex-shrink-0 mt-1">
-                        <Bot className="w-4 h-4 text-black" />
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#C9A227] to-amber-600 flex items-center justify-center flex-shrink-0 mt-1" aria-hidden="true">
+                        <Bot className="w-4 h-4 text-black" aria-hidden="true" />
                       </div>
                     )}
                     <div
@@ -198,22 +199,52 @@ export function IaDemoSection() {
                 ))}
               </AnimatePresence>
 
+              {/* Indicador "escribiendo..." */}
+              <AnimatePresence>
+                {isTyping && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 6 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex gap-2 justify-start"
+                    aria-label="El asistente está escribiendo"
+                  >
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#C9A227] to-amber-600 flex items-center justify-center flex-shrink-0 mt-1" aria-hidden="true">
+                      <Bot className="w-4 h-4 text-black" aria-hidden="true" />
+                    </div>
+                    <div className="bg-[#252530] border border-white/5 px-4 py-3 rounded-2xl rounded-tl-none flex items-center gap-1.5">
+                      {[0, 1, 2].map((i) => (
+                        <span
+                          key={i}
+                          className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"
+                          style={{ animationDelay: `${i * 0.15}s` }}
+                          aria-hidden="true"
+                        />
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Quick actions — aparecen al finalizar el flujo */}
               <AnimatePresence>
-                {step === "done" && (
+                {step === "done" && !isTyping && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: 0.4 }}
                     className="flex flex-wrap gap-2 pl-9"
+                    role="group"
+                    aria-label="Acciones rápidas"
                   >
                     {quickActions.map(({ label, icon: Icon }) => (
                       <button
                         key={label}
-                        onClick={() => setInput(label)}
-                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-[#C9A227]/30 text-[#C9A227]/80 hover:bg-[#C9A227]/10 transition-colors"
+                        onClick={() => handleSend(label)}
+                        className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-full border border-[#C9A227]/30 text-[#C9A227]/80 hover:bg-[#C9A227]/10 transition-colors duration-200 min-h-[36px]"
                       >
-                        <Icon className="w-3 h-3" />
+                        <Icon className="w-3 h-3" aria-hidden="true" />
                         {label}
                       </button>
                     ))}
@@ -231,19 +262,26 @@ export function IaDemoSection() {
                 }}
                 className="flex items-center gap-2"
               >
+                <label htmlFor="chat-input" className="sr-only">
+                  Escribe un mensaje al asistente
+                </label>
                 <input
+                  id="chat-input"
+                  ref={inputRef}
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Escribe un mensaje..."
-                  className="flex-1 bg-[#0f0f14] border border-[#C9A227]/30 text-white text-sm rounded-full px-4 py-2.5 placeholder:text-gray-600 focus:outline-none focus:border-[#C9A227]/60 transition-colors"
+                  autoComplete="off"
+                  className="flex-1 bg-[#0f0f14] border border-[#C9A227]/30 text-white text-sm rounded-full px-4 py-2.5 placeholder:text-gray-600 focus:outline-none focus:border-[#C9A227]/60 transition-colors duration-200"
                 />
                 <button
                   type="submit"
-                  disabled={!input.trim()}
-                  className="w-9 h-9 rounded-full bg-[#C9A227] flex items-center justify-center flex-shrink-0 hover:bg-[#C9A227]/90 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  disabled={!input.trim() || isTyping}
+                  aria-label="Enviar mensaje"
+                  className="w-9 h-9 rounded-full bg-[#C9A227] flex items-center justify-center flex-shrink-0 hover:bg-[#C9A227]/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors duration-200"
                 >
-                  <Send className="w-4 h-4 text-black" />
+                  <Send className="w-4 h-4 text-black" aria-hidden="true" />
                 </button>
               </form>
             </div>

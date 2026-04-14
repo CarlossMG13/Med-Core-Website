@@ -27,7 +27,7 @@ const plans = [
     badge: null,
     icon: Zap,
     accentColor: "#C9A227",
-    monthlyPrice: 1499,
+    monthlyPrice: 1400,
     annualPrice: 1199,
     description:
       "Ideal para consultorios independientes que buscan optimizar su gestión.",
@@ -49,7 +49,7 @@ const plans = [
     badge: "Más popular",
     icon: Star,
     accentColor: "#C9A227",
-    monthlyPrice: 2999,
+    monthlyPrice: 1600,
     annualPrice: 2399,
     description:
       "Para clínicas en crecimiento que necesitan potencia y automatización.",
@@ -73,7 +73,7 @@ const plans = [
     badge: null,
     icon: Shield,
     accentColor: "#a78bfa",
-    monthlyPrice: 5999,
+    monthlyPrice: 1900,
     annualPrice: 4799,
     description:
       "Solución enterprise para grupos hospitalarios y redes de clínicas.",

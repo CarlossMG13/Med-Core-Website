@@ -41,7 +41,7 @@ const features = [
     icon: RefreshCw,
     title: "Sincronización Bidireccional",
     description:
-      "Citas de MedCore aparecen instantáneamente en Google Calendar.",
+      "Citas de GarraMed aparecen instantáneamente en Google Calendar.",
   },
 ];
 
@@ -73,8 +73,9 @@ export function IntegracionesSection() {
                     <div className="w-full h-full rounded-full bg-zinc-700 flex items-center justify-center text-white font-bold text-lg">
                       <img
                         src={doctorPhoto}
-                        alt="Doctor Profile"
-                        className="w-full h-full object-cover rounded-full grayscale hover:grayscale-0 transition-all duration-500"
+                        alt="Dr. Carlos Zamudio, Cardiología Intervencionista"
+                        loading="lazy"
+                        className="w-full h-full object-cover rounded-full"
                       />
                     </div>
                   </div>
@@ -86,8 +87,8 @@ export function IntegracionesSection() {
                       Cardiología Intervencionista
                     </p>
                   </div>
-                  <div className="ml-auto">
-                    <BadgeCheck className="w-6 h-6 text-green-500" />
+                  <div className="ml-auto" title="Verificado">
+                    <BadgeCheck className="w-6 h-6 text-green-500" aria-hidden="true" />
                   </div>
                 </div>
 
@@ -102,7 +103,7 @@ export function IntegracionesSection() {
                         <Mail className="w-4 h-4 text-red-500" />
                       </div>
                       <span className="text-white font-mono text-xs sm:text-sm truncate">
-                        dr-zamudio@med-core.com.mx
+                        dr-zamudio@garra-med.com.mx
                       </span>
                     </div>
                     <span className="text-xs bg-green-900/30 text-green-400 px-2 py-1 rounded border border-green-900/50 flex-shrink-0">
@@ -118,8 +119,8 @@ export function IntegracionesSection() {
                       key={label}
                       className="flex flex-col items-center gap-2"
                     >
-                      <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center border border-gray-700 hover:border-[#C9A227]/50 transition-colors">
-                        <Icon className={`w-5 h-5 ${color}`} />
+                      <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center border border-gray-700 hover:border-[#C9A227]/50 transition-colors duration-200">
+                        <Icon className={`w-5 h-5 ${color}`} aria-hidden="true" />
                       </div>
                       <span className="text-[10px] text-gray-400">{label}</span>
                     </div>
@@ -159,7 +160,7 @@ export function IntegracionesSection() {
               {...fadeUp(0.2)}
             >
               Olvídese de las configuraciones manuales de TI. Al dar de alta un
-              nuevo médico en MedCore, generamos automáticamente su ecosistema
+              nuevo médico en GarraMed, generamos automáticamente su ecosistema
               digital profesional.
             </motion.p>
 
@@ -167,7 +168,7 @@ export function IntegracionesSection() {
               {features.map(({ icon: Icon, title, description }) => (
                 <li key={title} className="flex items-start">
                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#C9A227]/10 flex items-center justify-center mt-1">
-                    <Icon className="w-4 h-4 text-[#C9A227]" />
+                    <Icon className="w-4 h-4 text-[#C9A227]" aria-hidden="true" />
                   </div>
                   <div className="ml-4">
                     <h4 className="text-white font-bold text-lg">{title}</h4>
@@ -181,14 +182,14 @@ export function IntegracionesSection() {
         {/* CTA */}
         <motion.div className="mt-14 flex justify-center" {...fadeUp(0.4)}>
           <a
-            href="#contacto"
-            className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-[#C9A227] transition-colors group border border-white/5 hover:border-[#C9A227]/20 px-5 py-2.5 rounded-full"
+            href="#ia-demo"
+            className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-[#C9A227] transition-colors duration-200 group border border-white/5 hover:border-[#C9A227]/20 px-5 py-2.5 rounded-full min-h-[44px]"
           >
             ¿Quieres una integración personalizada?
             <span className="font-semibold text-[#C9A227]">
-              Contactar al equipo
+              Solicitar Demo
             </span>
-            <ArrowRight className="w-3.5 h-3.5 text-[#C9A227] group-hover:translate-x-1 transition-transform" />
+            <ArrowRight className="w-3.5 h-3.5 text-[#C9A227] group-hover:translate-x-1 transition-transform duration-200" aria-hidden="true" />
           </a>
         </motion.div>
       </div>

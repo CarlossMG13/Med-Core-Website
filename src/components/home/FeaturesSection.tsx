@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Scale, BarChart2, Shield } from "lucide-react";
+import { CalendarCheck, LayoutDashboard, Receipt, Scale, Globe } from "lucide-react";
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 24 },
@@ -10,23 +10,43 @@ const fadeUp = (delay = 0) => ({
 
 const features = [
   {
+    icon: CalendarCheck,
+    title: "Gestión del Consultorio",
+    description:
+      "Centraliza agendas, expedientes clínicos y flujos internos del consultorio. Control total de tu operación médica desde un solo panel.",
+  },
+  {
+    icon: LayoutDashboard,
+    title: "Administración Operativa",
+    description:
+      "Facturación automática, control de nómina y gestión de gastos en tiempo real. Reportes ejecutivos que impulsan decisiones inteligentes.",
+  },
+  {
+    icon: Receipt,
+    title: "Control Contable y Fiscal",
+    description:
+      "Genera CFDI, concilia cuentas y mantente al corriente de tus obligaciones fiscales. Contabilidad clara, ordenada y siempre al día.",
+  },
+  {
     icon: Scale,
-    title: "Defensa Jurídica",
+    title: "Cumplimiento Jurídico",
     description:
-      "Protección integral con automatización de documentos legales y seguimiento de casos en tiempo real.",
+      "Contratos, consentimientos y documentación legal automatizada. Tu institución protegida y en pleno cumplimiento normativo.",
   },
   {
-    icon: BarChart2,
-    title: "Gestión Financiera",
+    icon: Globe,
+    title: "Ecosistema Digital Profesional",
     description:
-      "Control total de facturación, nómina y gastos con reportes ejecutivos de alto nivel.",
+      "Página web, citas en línea y presencia digital integrados en un solo ecosistema. Conecta con tus pacientes desde cualquier canal.",
   },
-  {
-    icon: Shield,
-    title: "Cumplimiento Normativo",
-    description:
-      "Mantenga su institución al día con las últimas regulaciones de salud y estándares de seguridad.",
-  },
+];
+
+const colSpanClass = [
+  "md:col-span-2",
+  "md:col-span-2",
+  "md:col-span-2",
+  "md:col-span-3",
+  "md:col-span-3",
 ];
 
 export function FeaturesSecition() {
@@ -40,25 +60,34 @@ export function FeaturesSecition() {
           </h2>
           <div className="w-24 h-1 bg-[#C9A227] mx-auto rounded-full" />
           <p className="mt-4 text-gray-400 max-w-2xl mx-auto">
-            La plataforma definitiva que unifica lo legal, financiero y
-            operativo.
+            Somos una plataforma integral que centraliza toda tu operación:
+            Administración, contabilidad y respaldo jurídico en un solo
+            ECOSISTEMA.
           </p>
         </motion.div>
 
-        {/* Cards grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+        {/* Bento grid — 3 cards top, 2 cards bottom */}
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
           {features.map(({ icon: Icon, title, description }, i) => (
             <motion.div
               key={title}
               {...fadeUp(0.1 + i * 0.1)}
-              className="group p-8 bg-zinc-950 rounded-xl shadow-xl hover:shadow-2xl hover:shadow-[#C9A227]/10 transition-all duration-300 border border-gray-800 hover:border-[#C9A227]/50 relative overflow-hidden hover:-translate-y-2"
+              className={`group ${colSpanClass[i]} p-8 bg-zinc-950 rounded-xl shadow-xl hover:shadow-2xl hover:shadow-[#C9A227]/10 transition-[transform,box-shadow,border-color] duration-300 border border-gray-800 hover:border-[#C9A227]/50 relative overflow-hidden hover:-translate-y-2`}
             >
               {/* Left accent bar */}
               <div className="absolute top-0 left-0 w-1 h-full bg-[#C9A227] -translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
 
+              {/* Number badge */}
+              <span className="absolute top-6 right-6 text-xs font-mono text-gray-700 select-none">
+                0{i + 1}
+              </span>
+
               {/* Icon */}
               <div className="w-14 h-14 bg-[#C9A227]/10 group-hover:bg-[#C9A227] rounded-lg flex items-center justify-center mb-6 transition-colors duration-300">
-                <Icon className="w-7 h-7 text-[#C9A227] group-hover:text-black transition-colors duration-300" />
+                <Icon
+                  aria-hidden="true"
+                  className="w-7 h-7 text-[#C9A227] group-hover:text-black transition-colors duration-300"
+                />
               </div>
 
               <h3 className="text-xl font-bold text-white mb-3">{title}</h3>
