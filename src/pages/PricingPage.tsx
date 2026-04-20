@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   CheckCircle,
@@ -118,6 +119,7 @@ const trustBadges = [
 
 export function PricingPage() {
   const [isAnnual, setIsAnnual] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <div className="bg-black min-h-screen">
@@ -279,8 +281,16 @@ export function PricingPage() {
                       )}
                     </div>
 
-                    <a
-                      href="#contacto"
+                    <button
+                      onClick={() => {
+                        if (plan.id === "diamante") {
+                          window.location.href = "/#ia-demo";
+                        } else {
+                          navigate(
+                            `/checkout?plan=${plan.id}&billing=${isAnnual ? "annual" : "monthly"}`
+                          );
+                        }
+                      }}
                       className={`w-full text-center py-3 rounded-xl text-sm font-bold transition-all duration-300 mb-8 block ${
                         plan.featured
                           ? "bg-[#C9A227] text-black hover:bg-[#C9A227]/90 shadow-lg shadow-[#C9A227]/20"
@@ -288,7 +298,7 @@ export function PricingPage() {
                       }`}
                     >
                       {plan.cta}
-                    </a>
+                    </button>
 
                     <div className="border-t border-white/5 mb-6" />
 

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, useLocation, Outlet } from "react-router-dom";
 import { Navbar } from "./components/ui/shared/Navbar";
 import { Footer } from "./components/ui/shared/Footer";
 
@@ -10,6 +10,7 @@ import { FeaturesSecition } from "./components/home/FeaturesSection";
 import { AppFeaturesSection } from "./components/home/AppFeaturesSection";
 import { TestimonialsSection } from "./components/home/TestimonialsSection";
 import { PricingPage } from "./pages/PricingPage";
+import { CheckoutPage } from "./pages/CheckoutPage";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -19,31 +20,48 @@ function ScrollToTop() {
   return null;
 }
 
-function App() {
+function MainLayout() {
   return (
     <>
       <Navbar />
       <ScrollToTop />
       <main className="bg-black min-h-screen pt-16">
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <>
-                <HeroSection />
-                <IaDemoSection />
-                <IntegracionesSection />
-                <FeaturesSecition />
-                <AppFeaturesSection />
-                <TestimonialsSection />
-              </>
-            }
-          />
-          <Route path="/pricing" element={<PricingPage />} />
-        </Routes>
+        <Outlet />
       </main>
       <Footer />
     </>
+  );
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route element={<MainLayout />}>
+        <Route
+          path="/"
+          element={
+            <>
+              <HeroSection />
+              <IaDemoSection />
+              <IntegracionesSection />
+              <FeaturesSecition />
+              <AppFeaturesSection />
+              <TestimonialsSection />
+            </>
+          }
+        />
+        <Route path="/pricing" element={<PricingPage />} />
+      </Route>
+      <Route
+        path="/checkout"
+        element={
+          <>
+            <ScrollToTop />
+            <CheckoutPage />
+          </>
+        }
+      />
+    </Routes>
   );
 }
 

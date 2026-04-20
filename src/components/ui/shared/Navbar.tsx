@@ -41,8 +41,14 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // IntersectionObserver solo corre en la home; en otras rutas el observer no existe
+  // y activeId simplemente no se usa (se deriva abajo con effectiveId)
   useEffect(() => {
-    const sections = anchorLinks.map(({ id }) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
+    if (location.pathname !== "/") return;
+
+    const sections = anchorLinks
+      .map(({ id }) => document.getElementById(id))
+      .filter(Boolean) as HTMLElement[];
     if (!sections.length) return;
 
     const observer = new IntersectionObserver(
@@ -55,6 +61,10 @@ export function Navbar() {
     sections.forEach((s) => observer.observe(s));
     return () => observer.disconnect();
   }, [location.pathname]);
+
+  // ID de sección activa solo válido en la home; fuera de ella es null
+  const effectiveAnchorId = location.pathname === "/" ? activeId : null;
+  const isPricingActive = location.pathname === "/pricing";
 
   const handleLink = (id: string) => {
     setIsOpen(false);
@@ -91,24 +101,30 @@ export function Navbar() {
               <button
                 key={link.id}
                 onClick={() => handleLink(link.id)}
-                aria-current={activeId === link.id ? "true" : undefined}
+                aria-current={effectiveAnchorId === link.id ? "true" : undefined}
                 className={`relative cursor-pointer px-4 py-3 text-sm font-medium transition-colors duration-200 rounded-md min-h-[44px] ${
-                  activeId === link.id
+                  effectiveAnchorId === link.id
                     ? "text-[#C9A227]"
                     : "text-gray-300 hover:text-[#C9A227]"
                 }`}
               >
                 {link.label}
-                {activeId === link.id && (
+                {effectiveAnchorId === link.id && (
                   <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-[#C9A227] rounded-full" />
                 )}
               </button>
             ))}
             <Link
               to="/pricing"
-              className="px-4 py-3 text-sm font-medium text-gray-300 hover:text-[#C9A227] transition-colors duration-200 rounded-md min-h-[44px] flex items-center"
+              aria-current={isPricingActive ? "page" : undefined}
+              className={`relative px-4 py-3 text-sm font-medium transition-colors duration-200 rounded-md min-h-[44px] flex items-center ${
+                isPricingActive ? "text-[#C9A227]" : "text-gray-300 hover:text-[#C9A227]"
+              }`}
             >
               Pricing
+              {isPricingActive && (
+                <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-[#C9A227] rounded-full" />
+              )}
             </Link>
             <a
               href="https://doc-app-anex.vercel.app/"
@@ -149,9 +165,9 @@ export function Navbar() {
                 <button
                   key={link.id}
                   onClick={() => handleLink(link.id)}
-                  aria-current={activeId === link.id ? "true" : undefined}
+                  aria-current={effectiveAnchorId === link.id ? "true" : undefined}
                   className={`px-4 py-3 text-sm font-medium rounded-md text-left min-h-[44px] transition-colors duration-200 ${
-                    activeId === link.id
+                    effectiveAnchorId === link.id
                       ? "text-[#C9A227] bg-[#C9A227]/5"
                       : "text-gray-300 hover:text-[#C9A227] hover:bg-white/5"
                   }`}
@@ -162,7 +178,12 @@ export function Navbar() {
               <Link
                 to="/pricing"
                 onClick={() => setIsOpen(false)}
-                className="px-4 py-3 text-sm font-medium text-gray-300 hover:text-[#C9A227] transition-colors duration-200 rounded-md hover:bg-white/5 min-h-[44px] flex items-center"
+                aria-current={isPricingActive ? "page" : undefined}
+                className={`px-4 py-3 text-sm font-medium rounded-md hover:bg-white/5 min-h-[44px] flex items-center transition-colors duration-200 ${
+                  isPricingActive
+                    ? "text-[#C9A227] bg-[#C9A227]/5"
+                    : "text-gray-300 hover:text-[#C9A227]"
+                }`}
               >
                 Pricing
               </Link>
