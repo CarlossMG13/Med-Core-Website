@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { loadStripe } from "@stripe/stripe-js";
+import { loadStripe, type StripeCardElementOptions } from "@stripe/stripe-js";
 import {
   Elements,
   CardElement,
@@ -28,7 +28,7 @@ const stripePromise = loadStripe(
   "pk_test_51SuG9sJneQW4JvohHTfgyNEmHIiO2vTcaWXmN9SqsAaC9YAhXMYUFE3PGDN9SaBBsL3Lqym3bsGtlKP5E4D3czq900EcdKnOX1"
 );
 
-const CARD_ELEMENT_OPTIONS: Parameters<typeof CardElement>[0] = {
+const CARD_ELEMENT_OPTIONS: StripeCardElementOptions = {
   style: {
     base: {
       color: "#ffffff",
