@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { loadStripe, type StripeCardElementOptions } from "@stripe/stripe-js";
@@ -11,8 +11,6 @@ import {
 import {
   Check,
   Lock,
-  Eye,
-  EyeOff,
   ArrowLeft,
   Zap,
   Star,
@@ -50,8 +48,7 @@ interface AccountData {
   apellido: string;
   email: string;
   telefono: string;
-  password: string;
-  confirmPassword: string;
+  id_tipo_doctor: string;
 }
 
 interface StripeRegistrationData {
@@ -115,17 +112,6 @@ const PLANS: Record<
 
 const STEP_LABELS = ["Plan", "Tu Cuenta", "Pago", "¡Listo!"];
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function getPasswordStrength(p: string): number {
-  let s = 0;
-  if (p.length >= 8) s++;
-  if (/[A-Z]/.test(p)) s++;
-  if (/[0-9]/.test(p)) s++;
-  if (/[^A-Za-z0-9]/.test(p)) s++;
-  return s;
-}
-
 // ── UI primitives ─────────────────────────────────────────────────────────────
 
 function FieldWrapper({
@@ -163,40 +149,6 @@ function TextInput({
         hasError ? "border-red-500/60" : "border-white/10"
       } rounded-xl px-4 py-3 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:border-[#C9A227]/60 transition-colors duration-200`}
     />
-  );
-}
-
-const strengthLabels = ["", "Débil", "Regular", "Fuerte", "Muy fuerte"];
-const strengthColors = [
-  "",
-  "bg-red-500",
-  "bg-orange-500",
-  "bg-yellow-400",
-  "bg-green-500",
-];
-
-function PasswordStrength({ strength }: { strength: number }) {
-  if (strength === 0) return null;
-  return (
-    <div className="mt-2">
-      <div className="flex gap-1">
-        {[1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-              i <= strength ? strengthColors[strength] : "bg-white/10"
-            }`}
-          />
-        ))}
-      </div>
-      <p
-        className={`text-xs mt-1 ${
-          strength >= 3 ? "text-green-400" : "text-orange-400"
-        }`}
-      >
-        {strengthLabels[strength]}
-      </p>
-    </div>
   );
 }
 
@@ -389,12 +341,19 @@ function StepPlan({
 
 // ── Step 1: Account ───────────────────────────────────────────────────────────
 
+interface TipoDoctor {
+  id_tipo_doctor: string;
+  nombre_tipo: string;
+}
+
 function StepAccount({
   account,
   setAccount,
   errors,
   apiError,
   isProcessing,
+  tiposDoctor,
+  loadingTipos,
   onContinue,
   onBack,
 }: {
@@ -403,14 +362,12 @@ function StepAccount({
   errors: FieldErrors;
   apiError: string;
   isProcessing: boolean;
+  tiposDoctor: TipoDoctor[];
+  loadingTipos: boolean;
   onContinue: () => void;
   onBack: () => void;
 }) {
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const strength = getPasswordStrength(account.password);
-
-  const set = (field: keyof AccountData) => (e: React.ChangeEvent<HTMLInputElement>) =>
+  const set = (field: keyof AccountData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setAccount((prev) => ({ ...prev, [field]: e.target.value }));
 
   return (
@@ -427,6 +384,7 @@ function StepAccount({
       <h2 className="text-2xl font-bold text-white mb-2">Crea tu cuenta</h2>
       <p className="text-gray-400 text-sm mb-8">
         Estos datos se usarán para acceder al dashboard y recibir tus credenciales institucionales.
+        Recibirás una contraseña temporal por email al confirmar tu pago.
       </p>
 
       <div className="space-y-5">
@@ -461,7 +419,7 @@ function StepAccount({
             autoComplete="email"
           />
           <p className="text-gray-600 text-xs mt-1.5">
-            Aquí recibirás tus credenciales institucionales y comprobante de pago.
+            Aquí recibirás tus credenciales de acceso y comprobante de pago.
           </p>
         </FieldWrapper>
 
@@ -481,62 +439,24 @@ function StepAccount({
           />
         </FieldWrapper>
 
-        <FieldWrapper label="Contraseña" error={errors.password}>
-          <div className="relative">
-            <TextInput
-              type={showPassword ? "text" : "password"}
-              placeholder="Mínimo 8 caracteres"
-              value={account.password}
-              onChange={set("password")}
-              hasError={!!errors.password}
-              autoComplete="new-password"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
-            >
-              {showPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
-            </button>
-          </div>
-          <PasswordStrength strength={strength} />
-          {strength < 4 && account.password.length > 0 && (
-            <ul className="mt-2 space-y-0.5">
-              {[
-                { ok: account.password.length >= 8, label: "Al menos 8 caracteres" },
-                { ok: /[A-Z]/.test(account.password), label: "Una mayúscula" },
-                { ok: /[0-9]/.test(account.password), label: "Un número" },
-                { ok: /[^A-Za-z0-9]/.test(account.password), label: "Un símbolo (@!#...)" },
-              ].map(({ ok, label }) => (
-                <li key={label} className={`flex items-center gap-1.5 text-xs ${ok ? "text-green-400" : "text-gray-600"}`}>
-                  <Check className={`w-3 h-3 ${ok ? "opacity-100" : "opacity-30"}`} aria-hidden="true" />
-                  {label}
-                </li>
-              ))}
-            </ul>
-          )}
-        </FieldWrapper>
-
-        <FieldWrapper label="Confirmar contraseña" error={errors.confirmPassword}>
-          <div className="relative">
-            <TextInput
-              type={showConfirm ? "text" : "password"}
-              placeholder="Repite tu contraseña"
-              value={account.confirmPassword}
-              onChange={set("confirmPassword")}
-              hasError={!!errors.confirmPassword}
-              autoComplete="new-password"
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirm((v) => !v)}
-              aria-label={showConfirm ? "Ocultar contraseña" : "Mostrar contraseña"}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
-            >
-              {showConfirm ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
-            </button>
-          </div>
+        <FieldWrapper label="Tipo de médico" error={errors.id_tipo_doctor}>
+          <select
+            value={account.id_tipo_doctor}
+            onChange={set("id_tipo_doctor")}
+            disabled={loadingTipos}
+            className={`w-full bg-zinc-900 border ${
+              errors.id_tipo_doctor ? "border-red-500/60" : "border-white/10"
+            } rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#C9A227]/60 transition-colors duration-200 appearance-none disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            <option value="" disabled className="text-gray-600">
+              {loadingTipos ? "Cargando especialidades..." : "Selecciona tu especialidad"}
+            </option>
+            {tiposDoctor.map((t) => (
+              <option key={t.id_tipo_doctor} value={t.id_tipo_doctor} className="bg-zinc-900">
+                {t.nombre_tipo}
+              </option>
+            ))}
+          </select>
         </FieldWrapper>
       </div>
 
@@ -853,13 +773,22 @@ export function CheckoutPage() {
     apellido: "",
     email: "",
     telefono: "",
-    password: "",
-    confirmPassword: "",
+    id_tipo_doctor: "",
   });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [apiError, setApiError] = useState("");
   const [stripeData, setStripeData] = useState<StripeRegistrationData | null>(null);
+  const [tiposDoctor, setTiposDoctor] = useState<TipoDoctor[]>([]);
+  const [loadingTipos, setLoadingTipos] = useState(true);
+
+  useEffect(() => {
+    fetch("https://docapp-anex-production.up.railway.app/api/tipo-doctor")
+      .then((res) => res.json())
+      .then((data) => setTiposDoctor(Array.isArray(data) ? data : []))
+      .catch(() => setTiposDoctor([]))
+      .finally(() => setLoadingTipos(false));
+  }, []);
 
   const goForward = () => {
     setDirection(1);
@@ -880,8 +809,7 @@ export function CheckoutPage() {
     if (!account.apellido.trim()) e.apellido = "Requerido";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(account.email)) e.email = "Email inválido";
     if (account.telefono.length < 10) e.telefono = "Ingresa 10 dígitos";
-    if (getPasswordStrength(account.password) < 3) e.password = "La contraseña es muy débil";
-    if (account.password !== account.confirmPassword) e.confirmPassword = "Las contraseñas no coinciden";
+    if (!account.id_tipo_doctor) e.id_tipo_doctor = "Selecciona un tipo";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -902,9 +830,9 @@ export function CheckoutPage() {
             apellido: account.apellido,
             email: account.email,
             telefono: account.telefono,
+            id_tipo_doctor: account.id_tipo_doctor,
             plan: selectedPlan.toUpperCase(),
-            billing_cycle: "MENSUAL",
-            password: account.password,
+            billing_cycle: billing,
           }),
         }
       );
@@ -1025,6 +953,8 @@ export function CheckoutPage() {
                     errors={errors}
                     apiError={apiError}
                     isProcessing={isProcessing}
+                    tiposDoctor={tiposDoctor}
+                    loadingTipos={loadingTipos}
                     onContinue={handleAccountContinue}
                     onBack={goBack}
                   />
