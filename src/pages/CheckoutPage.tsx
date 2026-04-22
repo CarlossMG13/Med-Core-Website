@@ -1,13 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { loadStripe, type StripeCardElementOptions } from "@stripe/stripe-js";
-import {
-  Elements,
-  CardElement,
-  useStripe,
-  useElements,
-} from "@stripe/react-stripe-js";
 import {
   Check,
   Lock,
@@ -16,27 +9,7 @@ import {
   Star,
   Shield,
   CheckCircle2,
-  Mail,
-  ExternalLink,
 } from "lucide-react";
-
-// ── Stripe ────────────────────────────────────────────────────────────────────
-
-const stripePromise = loadStripe(
-  "pk_test_51SuG9sJneQW4JvohHTfgyNEmHIiO2vTcaWXmN9SqsAaC9YAhXMYUFE3PGDN9SaBBsL3Lqym3bsGtlKP5E4D3czq900EcdKnOX1"
-);
-
-const CARD_ELEMENT_OPTIONS: StripeCardElementOptions = {
-  style: {
-    base: {
-      color: "#ffffff",
-      fontFamily: "Geist, system-ui, sans-serif",
-      fontSize: "14px",
-      "::placeholder": { color: "#4b5563" },
-    },
-    invalid: { color: "#f87171" },
-  },
-};
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -49,12 +22,6 @@ interface AccountData {
   email: string;
   telefono: string;
   id_tipo_doctor: string;
-}
-
-interface StripeRegistrationData {
-  clientSecret: string;
-  customerId: string;
-  doctorId: string;
 }
 
 type FieldErrors = Partial<AccountData>;
@@ -110,7 +77,7 @@ const PLANS: Record<
   },
 };
 
-const STEP_LABELS = ["Plan", "Tu Cuenta", "Pago", "¡Listo!"];
+const STEP_LABELS = ["Plan", "Tu Cuenta"];
 
 // ── UI primitives ─────────────────────────────────────────────────────────────
 
@@ -494,268 +461,6 @@ function StepAccount({
   );
 }
 
-// ── Step 2: Stripe Elements payment form ──────────────────────────────────────
-
-function StepPaymentInner({
-  clientSecret,
-  account,
-  planId,
-  billing,
-  onSuccess,
-  onBack,
-}: {
-  clientSecret: string;
-  account: AccountData;
-  planId: PlanId;
-  billing: Billing;
-  onSuccess: () => void;
-  onBack: () => void;
-}) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentError, setPaymentError] = useState("");
-
-  const plan = PLANS[planId];
-  const price = billing === "annual" ? plan.annualPrice : plan.monthlyPrice;
-
-  const handlePay = async () => {
-    if (!stripe || !elements) return;
-    const cardElement = elements.getElement(CardElement);
-    if (!cardElement) return;
-
-    setIsProcessing(true);
-    setPaymentError("");
-
-    const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-      payment_method: {
-        card: cardElement,
-        billing_details: {
-          name: `${account.nombre} ${account.apellido}`,
-          email: account.email,
-          phone: account.telefono,
-        },
-      },
-    });
-
-    if (error) {
-      setPaymentError(error.message ?? "Error al procesar el pago. Intenta de nuevo.");
-      setIsProcessing(false);
-    } else if (paymentIntent?.status === "succeeded") {
-      onSuccess();
-    }
-  };
-
-  return (
-    <div className="max-w-xl">
-      <button
-        onClick={onBack}
-        className="flex items-center gap-1.5 text-gray-500 hover:text-white transition-colors text-sm mb-6"
-        aria-label="Volver al paso anterior"
-      >
-        <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-        Volver
-      </button>
-
-      <h2 className="text-2xl font-bold text-white mb-2">Método de pago</h2>
-      <p className="text-gray-400 text-sm mb-8">
-        Tu información de pago está protegida con cifrado de grado bancario.
-      </p>
-
-      {/* Card element */}
-      <div className="bg-zinc-950 border border-white/10 rounded-2xl p-6 mb-4">
-        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-          Tarjeta de crédito o débito
-        </label>
-        <div className="bg-zinc-900 border border-white/10 rounded-xl px-4 py-3.5 focus-within:border-[#C9A227]/60 transition-colors duration-200">
-          <CardElement options={CARD_ELEMENT_OPTIONS} />
-        </div>
-      </div>
-
-      {/* Mobile order summary */}
-      <div className="lg:hidden bg-zinc-950 border border-white/10 rounded-2xl p-5 mb-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-gray-400 text-xs">Plan {plan.name}</p>
-            <p className="text-gray-500 text-xs capitalize">
-              {billing === "annual" ? "Anual" : "Mensual"}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-white font-black text-xl">${price.toLocaleString("es-MX")}</p>
-            <p className="text-gray-500 text-xs">/mes</p>
-          </div>
-        </div>
-      </div>
-
-      {paymentError && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 mb-4">
-          <p className="text-red-400 text-sm">{paymentError}</p>
-        </div>
-      )}
-
-      <button
-        onClick={handlePay}
-        disabled={isProcessing || !stripe}
-        className="w-full bg-[#C9A227] text-black font-bold py-4 rounded-2xl hover:bg-[#C9A227]/90 disabled:opacity-70 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2 text-sm shadow-lg shadow-[#C9A227]/20"
-      >
-        {isProcessing ? (
-          <>
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full"
-              aria-hidden="true"
-            />
-            Procesando pago…
-          </>
-        ) : (
-          <>
-            <Lock className="w-4 h-4" aria-hidden="true" />
-            Pagar ${price.toLocaleString("es-MX")}/mes
-          </>
-        )}
-      </button>
-
-      <p className="text-center text-gray-600 text-xs mt-4">
-        Al confirmar aceptas nuestros{" "}
-        <a href="#" className="text-[#C9A227]/70 hover:text-[#C9A227] underline transition-colors">
-          Términos de Servicio
-        </a>{" "}
-        y{" "}
-        <a href="#" className="text-[#C9A227]/70 hover:text-[#C9A227] underline transition-colors">
-          Política de Privacidad
-        </a>.
-      </p>
-    </div>
-  );
-}
-
-// Wrapper that provides the Elements context for step 2
-function StepPayment(props: Omit<Parameters<typeof StepPaymentInner>[0], never>) {
-  return (
-    <Elements stripe={stripePromise}>
-      <StepPaymentInner {...props} />
-    </Elements>
-  );
-}
-
-// ── Step 3: Success ───────────────────────────────────────────────────────────
-
-function StepSuccess({
-  account,
-  planId,
-  billing,
-}: {
-  account: AccountData;
-  planId: PlanId;
-  billing: Billing;
-}) {
-  const plan = PLANS[planId];
-  const price = billing === "annual" ? plan.annualPrice : plan.monthlyPrice;
-  const institutionalEmail =
-    account.nombre && account.apellido
-      ? `${account.nombre.toLowerCase()}.${account.apellido.toLowerCase()}@garra-med.com.mx`
-      : "nombre.apellido@garra-med.com.mx";
-
-  return (
-    <div className="max-w-lg mx-auto text-center py-8">
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
-        className="w-20 h-20 rounded-full bg-green-500/15 border-2 border-green-500/40 flex items-center justify-center mx-auto mb-6"
-      >
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }}>
-          <Check className="w-10 h-10 text-green-400" aria-hidden="true" />
-        </motion.div>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <h2 className="text-3xl font-bold text-white mb-2">
-          ¡Bienvenido{account.nombre ? `, Dr. ${account.nombre}` : ""}!
-        </h2>
-        <p className="text-gray-400 text-sm mb-10">
-          Tu suscripción al Plan {plan.name} está activa. Revisa tu correo para continuar.
-        </p>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.45 }}
-        className="space-y-3 mb-10"
-      >
-        <div className="bg-zinc-950 border border-[#C9A227]/20 rounded-2xl p-5 text-left">
-          <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#C9A227]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <Mail className="w-4 h-4 text-[#C9A227]" aria-hidden="true" />
-            </div>
-            <div>
-              <p className="text-white font-semibold text-sm mb-1">Tu correo institucional</p>
-              <p className="text-[#C9A227] font-mono text-sm break-all">{institutionalEmail}</p>
-              <p className="text-gray-500 text-xs mt-1.5">
-                Recibirás las credenciales en{" "}
-                <span className="text-gray-300">{account.email || "tu email personal"}</span>{" "}
-                en los próximos minutos.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-zinc-950 border border-white/10 rounded-2xl p-5 text-left">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-xs mb-0.5">Plan activo</p>
-              <p className="text-white font-bold">Plan {plan.name}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-white font-black text-xl">${price.toLocaleString("es-MX")}</p>
-              <p className="text-gray-500 text-xs">/mes</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-zinc-950 border border-yellow-500/20 rounded-2xl p-5 text-left">
-          <p className="text-yellow-400 text-xs font-semibold mb-1">Verificación pendiente</p>
-          <p className="text-gray-400 text-xs leading-relaxed">
-            Puedes acceder al dashboard ahora, pero tu perfil no aparecerá en el directorio
-            público hasta completar la verificación.
-          </p>
-        </div>
-      </motion.div>
-
-      <motion.a
-        href="https://doc-app-anex.vercel.app/"
-        target="_blank"
-        rel="noreferrer"
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        className="inline-flex items-center justify-center gap-2 w-full bg-[#C9A227] text-black font-bold py-4 rounded-2xl hover:bg-[#C9A227]/90 transition-colors duration-200 text-sm shadow-lg shadow-[#C9A227]/20"
-      >
-        Ir al Dashboard
-        <ExternalLink className="w-4 h-4" aria-hidden="true" />
-      </motion.a>
-
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.7 }}
-        className="mt-4"
-      >
-        <Link to="/pricing" className="text-gray-600 hover:text-gray-400 text-xs transition-colors">
-          Volver a Planes
-        </Link>
-      </motion.div>
-    </div>
-  );
-}
-
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export function CheckoutPage() {
@@ -778,7 +483,6 @@ export function CheckoutPage() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [apiError, setApiError] = useState("");
-  const [stripeData, setStripeData] = useState<StripeRegistrationData | null>(null);
   const [tiposDoctor, setTiposDoctor] = useState<TipoDoctor[]>([]);
   const [loadingTipos, setLoadingTipos] = useState(true);
 
@@ -793,7 +497,7 @@ export function CheckoutPage() {
   const goForward = () => {
     setDirection(1);
     setErrors({});
-    setStep((s) => Math.min(s + 1, 3));
+    setStep((s) => Math.min(s + 1, 1));
   };
 
   const goBack = () => {
@@ -814,7 +518,6 @@ export function CheckoutPage() {
     return Object.keys(e).length === 0;
   };
 
-  // Step 1 → 2: register doctor and get clientSecret
   const handleAccountContinue = async () => {
     if (!validateAccount()) return;
     setIsProcessing(true);
@@ -838,15 +541,9 @@ export function CheckoutPage() {
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.message ?? "Error al crear la cuenta");
-      setStripeData({
-        clientSecret: data.clientSecret,
-        customerId: data.customerId,
-        doctorId: data.doctorId,
-      });
-      goForward();
+      window.location.href = data.checkoutUrl;
     } catch (err) {
       setApiError(err instanceof Error ? err.message : "Ocurrió un error. Intenta de nuevo.");
-    } finally {
       setIsProcessing(false);
     }
   };
@@ -924,7 +621,7 @@ export function CheckoutPage() {
       {/* Content */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-20">
         <div
-          className={`grid gap-10 ${step < 3 ? "lg:grid-cols-[1fr_360px]" : ""}`}
+          className="grid gap-10 lg:grid-cols-[1fr_360px]"
         >
           <div>
             <AnimatePresence custom={direction} mode="wait">
@@ -959,32 +656,13 @@ export function CheckoutPage() {
                     onBack={goBack}
                   />
                 )}
-                {step === 2 && stripeData && (
-                  <StepPayment
-                    clientSecret={stripeData.clientSecret}
-                    account={account}
-                    planId={selectedPlan}
-                    billing={billing}
-                    onSuccess={goForward}
-                    onBack={goBack}
-                  />
-                )}
-                {step === 3 && (
-                  <StepSuccess
-                    account={account}
-                    planId={selectedPlan}
-                    billing={billing}
-                  />
-                )}
               </motion.div>
             </AnimatePresence>
           </div>
 
-          {step < 3 && (
-            <div className="hidden lg:block">
-              <OrderSummary planId={selectedPlan} billing={billing} />
-            </div>
-          )}
+          <div className="hidden lg:block">
+            <OrderSummary planId={selectedPlan} billing={billing} />
+          </div>
         </div>
       </div>
     </div>
