@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(npm install *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(python .claude/skills/ui-ux-pro-max/scripts/search.py \"medical SaaS checkout payment dark professional\" --design-system -p \"MedCore Checkout\")",
+      "Bash(python -c \"import sys; sys.stdout.reconfigure\\(encoding='utf-8'\\)\")",
+      "Bash(python .claude/skills/ui-ux-pro-max/scripts/search.py \"medical SaaS checkout payment dark professional\" --design-system -p \"MedCore Checkout\" -f markdown)",
+      "Bash(python -c \"import sys; [print\\(l, end=''\\) for l in sys.stdin]\")",
+      "PowerShell(cd \"d:\\\\Chamba\\\\MedCore-Website\"; $env:PYTHONIOENCODING='utf-8'; python .claude/skills/ui-ux-pro-max/scripts/search.py \"medical SaaS checkout payment dark professional\" --design-system -p \"MedCore Checkout\" -f markdown 2>&1)",
+      "PowerShell(cd \"d:\\\\Chamba\\\\MedCore-Website\"; $env:PYTHONIOENCODING='utf-8'; python .claude/skills/ui-ux-pro-max/scripts/search.py \"checkout payment form error loading states\" --domain ux -n 8 2>&1)"
     ]
   }
 }

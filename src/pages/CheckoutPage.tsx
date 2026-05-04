@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { loadStripe, type StripeEmbeddedCheckoutPage } from "@stripe/stripe-js";
 import {
   Check,
   Lock,
@@ -9,7 +10,18 @@ import {
   Star,
   Shield,
   CheckCircle2,
+  Mail,
+  ExternalLink,
+  AlertCircle,
 } from "lucide-react";
+
+// ── Stripe & API ──────────────────────────────────────────────────────────────
+
+const stripePromise = loadStripe(
+  "pk_test_51SuG9sJneQW4JvohHTfgyNEmHIiO2vTcaWXmN9SqsAaC9YAhXMYUFE3PGDN9SaBBsL3Lqym3bsGtlKP5E4D3czq900EcdKnOX1"
+);
+
+const API = "https://docapp-anex-production.up.railway.app";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -25,6 +37,11 @@ interface AccountData {
 }
 
 type FieldErrors = Partial<AccountData>;
+
+interface TipoDoctor {
+  id_tipo_doctor: string;
+  nombre_tipo: string;
+}
 
 // ── Plan data ─────────────────────────────────────────────────────────────────
 
@@ -77,7 +94,7 @@ const PLANS: Record<
   },
 };
 
-const STEP_LABELS = ["Plan", "Tu Cuenta"];
+const STEP_LABELS = ["Plan", "Tu Cuenta", "Pago", "¡Listo!"];
 
 // ── UI primitives ─────────────────────────────────────────────────────────────
 
@@ -97,7 +114,7 @@ function FieldWrapper({
       </label>
       {children}
       {error && (
-        <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1">
+        <p role="alert" className="text-red-400 text-xs mt-1.5 flex items-center gap-1">
           {error}
         </p>
       )}
@@ -121,13 +138,7 @@ function TextInput({
 
 // ── Order summary sidebar ──────────────────────────────────────────────────────
 
-function OrderSummary({
-  planId,
-  billing,
-}: {
-  planId: PlanId;
-  billing: Billing;
-}) {
+function OrderSummary({ planId, billing }: { planId: PlanId; billing: Billing }) {
   const plan = PLANS[planId];
   const price = billing === "annual" ? plan.annualPrice : plan.monthlyPrice;
   const PlanIcon = plan.icon;
@@ -178,9 +189,7 @@ function OrderSummary({
         </div>
         {billing === "annual" && (
           <p className="text-green-400 text-xs mt-1.5 text-right">
-            Ahorras $
-            {((plan.monthlyPrice - plan.annualPrice) * 12).toLocaleString("es-MX")}{" "}
-            al año
+            Ahorras ${((plan.monthlyPrice - plan.annualPrice) * 12).toLocaleString("es-MX")} al año
           </p>
         )}
       </div>
@@ -218,7 +227,7 @@ function StepPlan({
       <div className="inline-flex items-center gap-2 bg-zinc-900 border border-white/10 rounded-full p-1 mb-6">
         <button
           onClick={() => setBilling("monthly")}
-          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 ${
+          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 cursor-pointer ${
             billing === "monthly" ? "bg-[#C9A227] text-black" : "text-gray-400 hover:text-white"
           }`}
         >
@@ -226,7 +235,7 @@ function StepPlan({
         </button>
         <button
           onClick={() => setBilling("annual")}
-          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 ${
+          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
             billing === "annual" ? "bg-[#C9A227] text-black" : "text-gray-400 hover:text-white"
           }`}
         >
@@ -253,7 +262,7 @@ function StepPlan({
               key={id}
               onClick={() => setSelectedPlan(id)}
               aria-pressed={isSelected}
-              className={`w-full text-left rounded-2xl border p-5 transition-all duration-200 ${
+              className={`w-full text-left rounded-2xl border p-5 transition-all duration-200 cursor-pointer ${
                 isSelected
                   ? "border-[#C9A227]/60 bg-[#C9A227]/5"
                   : "border-white/10 bg-zinc-950 hover:border-white/20"
@@ -295,7 +304,7 @@ function StepPlan({
 
       <button
         onClick={onContinue}
-        className="w-full bg-[#C9A227] text-black font-bold py-4 rounded-2xl hover:bg-[#C9A227]/90 transition-colors duration-200 flex items-center justify-center gap-2 text-sm shadow-lg shadow-[#C9A227]/20"
+        className="w-full bg-[#C9A227] text-black font-bold py-4 rounded-2xl hover:bg-[#C9A227]/90 transition-colors duration-200 flex items-center justify-center gap-2 text-sm shadow-lg shadow-[#C9A227]/20 cursor-pointer"
       >
         Continuar con Plan {PLANS[selectedPlan].name}
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
@@ -308,17 +317,10 @@ function StepPlan({
 
 // ── Step 1: Account ───────────────────────────────────────────────────────────
 
-interface TipoDoctor {
-  id_tipo_doctor: string;
-  nombre_tipo: string;
-}
-
 function StepAccount({
   account,
   setAccount,
   errors,
-  apiError,
-  isProcessing,
   tiposDoctor,
   loadingTipos,
   onContinue,
@@ -327,21 +329,21 @@ function StepAccount({
   account: AccountData;
   setAccount: React.Dispatch<React.SetStateAction<AccountData>>;
   errors: FieldErrors;
-  apiError: string;
-  isProcessing: boolean;
   tiposDoctor: TipoDoctor[];
   loadingTipos: boolean;
   onContinue: () => void;
   onBack: () => void;
 }) {
-  const set = (field: keyof AccountData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setAccount((prev) => ({ ...prev, [field]: e.target.value }));
+  const set =
+    (field: keyof AccountData) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+      setAccount((prev) => ({ ...prev, [field]: e.target.value }));
 
   return (
     <div className="max-w-xl">
       <button
         onClick={onBack}
-        className="flex items-center gap-1.5 text-gray-500 hover:text-white transition-colors text-sm mb-6"
+        className="flex items-center gap-1.5 text-gray-500 hover:text-white transition-colors text-sm mb-6 cursor-pointer"
         aria-label="Volver al paso anterior"
       >
         <ArrowLeft className="w-4 h-4" aria-hidden="true" />
@@ -350,8 +352,8 @@ function StepAccount({
 
       <h2 className="text-2xl font-bold text-white mb-2">Crea tu cuenta</h2>
       <p className="text-gray-400 text-sm mb-8">
-        Estos datos se usarán para acceder al dashboard y recibir tus credenciales institucionales.
-        Recibirás una contraseña temporal por email al confirmar tu pago.
+        Ingresa tus datos para crear tu cuenta. Recibirás tus credenciales institucionales
+        por correo electrónico una vez confirmado el pago.
       </p>
 
       <div className="space-y-5">
@@ -413,7 +415,7 @@ function StepAccount({
             disabled={loadingTipos}
             className={`w-full bg-zinc-900 border ${
               errors.id_tipo_doctor ? "border-red-500/60" : "border-white/10"
-            } rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#C9A227]/60 transition-colors duration-200 appearance-none disabled:opacity-50 disabled:cursor-not-allowed`}
+            } rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#C9A227]/60 transition-colors duration-200 appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             <option value="" disabled className="text-gray-600">
               {loadingTipos ? "Cargando especialidades..." : "Selecciona tu especialidad"}
@@ -427,36 +429,245 @@ function StepAccount({
         </FieldWrapper>
       </div>
 
-      {apiError && (
-        <div className="mt-5 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
-          <p className="text-red-400 text-sm">{apiError}</p>
+      <button
+        onClick={onContinue}
+        className="w-full mt-8 bg-[#C9A227] text-black font-bold py-4 rounded-2xl hover:bg-[#C9A227]/90 transition-colors duration-200 flex items-center justify-center gap-2 text-sm shadow-lg shadow-[#C9A227]/20 cursor-pointer"
+      >
+        Continuar al Pago
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+// ── Step 2: Stripe Embedded Checkout ─────────────────────────────────────────
+
+function StepPayment({
+  account,
+  planId,
+  billing,
+  onBack,
+}: {
+  account: AccountData;
+  planId: PlanId;
+  billing: Billing;
+  onBack: () => void;
+}) {
+  const checkoutRef = useRef<StripeEmbeddedCheckoutPage | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [sessionError, setSessionError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    (async () => {
+      try {
+        const stripe = await stripePromise;
+        if (!stripe || !active) return;
+
+        const checkout = await stripe.createEmbeddedCheckoutPage({
+          fetchClientSecret: async () => {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 20_000);
+            try {
+              const res = await fetch(`${API}/api/checkout/create-session`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  nombre: account.nombre,
+                  apellido: account.apellido,
+                  email: account.email,
+                  telefono: account.telefono,
+                  id_tipo_doctor: account.id_tipo_doctor,
+                  plan: planId.toUpperCase(),
+                  billing_cycle: billing,
+                }),
+                signal: controller.signal,
+              });
+              const text = await res.text();
+              let data: Record<string, unknown>;
+              try {
+                data = JSON.parse(text);
+              } catch {
+                throw new Error(
+                  `El servidor respondió con un error (${res.status}). El endpoint /api/checkout/create-session puede no estar implementado aún.`
+                );
+              }
+              if (!res.ok) throw new Error((data.message as string) ?? `Error ${res.status} al iniciar sesión de pago`);
+              if (!data.clientSecret) throw new Error("El servidor no devolvió un clientSecret válido");
+              return data.clientSecret as string;
+            } catch (err) {
+              if (err instanceof Error && err.name === "AbortError") {
+                throw new Error("El servidor tardó demasiado en responder. Intenta de nuevo.");
+              }
+              throw err;
+            } finally {
+              clearTimeout(timer);
+            }
+          },
+        });
+
+        if (!active) {
+          checkout.destroy();
+          return;
+        }
+
+        checkoutRef.current = checkout;
+        checkout.mount("#stripe-checkout");
+        setLoading(false);
+      } catch (err) {
+        if (active) {
+          setSessionError(
+            err instanceof Error ? err.message : "No se pudo cargar el formulario de pago."
+          );
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+      checkoutRef.current?.destroy();
+      checkoutRef.current = null;
+    };
+  }, []);
+
+  return (
+    <div className="max-w-2xl">
+      <button
+        onClick={onBack}
+        className="flex items-center gap-1.5 text-gray-500 hover:text-white transition-colors text-sm mb-6 cursor-pointer"
+        aria-label="Volver al paso anterior"
+      >
+        <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+        Volver
+      </button>
+
+      <h2 className="text-2xl font-bold text-white mb-2">Completa tu pago</h2>
+      <p className="text-gray-400 text-sm mb-6">
+        Procesado de forma segura por Stripe. Tu tarjeta nunca pasa por nuestros servidores.
+      </p>
+
+      {loading && !sessionError && (
+        <div className="space-y-3 animate-pulse" aria-label="Cargando formulario de pago">
+          <div className="h-12 bg-zinc-800/80 rounded-xl" />
+          <div className="h-12 bg-zinc-800/80 rounded-xl" />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="h-12 bg-zinc-800/80 rounded-xl" />
+            <div className="h-12 bg-zinc-800/80 rounded-xl" />
+          </div>
+          <div className="h-14 bg-zinc-800/80 rounded-2xl mt-4" />
         </div>
       )}
 
-      <button
-        onClick={onContinue}
-        disabled={isProcessing}
-        className="w-full mt-8 bg-[#C9A227] text-black font-bold py-4 rounded-2xl hover:bg-[#C9A227]/90 disabled:opacity-70 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2 text-sm shadow-lg shadow-[#C9A227]/20"
+      {sessionError && (
+        <div
+          role="alert"
+          className="bg-red-500/10 border border-red-500/30 rounded-2xl px-5 py-4 flex items-start gap-3"
+        >
+          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
+          <div>
+            <p className="text-red-400 text-sm font-semibold">No se pudo cargar el pago</p>
+            <p className="text-red-400/70 text-xs mt-0.5 leading-relaxed">{sessionError}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="text-red-400 text-xs underline mt-2 hover:text-red-300 transition-colors cursor-pointer"
+            >
+              Intentar de nuevo
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div id="stripe-checkout" />
+    </div>
+  );
+}
+
+// ── Step 3: Success ───────────────────────────────────────────────────────────
+
+function StepSuccess() {
+  return (
+    <div className="max-w-lg mx-auto text-center py-8">
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
+        className="w-20 h-20 rounded-full bg-green-500/15 border-2 border-green-500/40 flex items-center justify-center mx-auto mb-6"
       >
-        {isProcessing ? (
-          <>
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full"
-              aria-hidden="true"
-            />
-            Creando tu cuenta…
-          </>
-        ) : (
-          <>
-            Continuar al Pago
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </>
-        )}
-      </button>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }}>
+          <Check className="w-10 h-10 text-green-400" aria-hidden="true" />
+        </motion.div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <h2 className="text-3xl font-bold text-white mb-2">¡Pago confirmado!</h2>
+        <p className="text-gray-400 text-sm mb-10">
+          Tu suscripción está activa. En los próximos minutos recibirás un correo con tus
+          credenciales institucionales.
+        </p>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.45 }}
+        className="space-y-3 mb-10"
+      >
+        <div className="bg-zinc-950 border border-[#C9A227]/20 rounded-2xl p-5 text-left">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#C9A227]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <Mail className="w-4 h-4 text-[#C9A227]" aria-hidden="true" />
+            </div>
+            <div>
+              <p className="text-white font-semibold text-sm mb-1">Revisa tu correo</p>
+              <p className="text-gray-400 text-xs leading-relaxed">
+                Te enviaremos tu correo institucional{" "}
+                <span className="text-[#C9A227]">@garra-med.com.mx</span> junto con la contraseña
+                temporal para acceder al dashboard.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-zinc-950 border border-yellow-500/20 rounded-2xl p-5 text-left">
+          <p className="text-yellow-400 text-xs font-semibold mb-1">Verificación pendiente</p>
+          <p className="text-gray-400 text-xs leading-relaxed">
+            Tu perfil no aparecerá en el directorio público hasta que completes la verificación
+            de cédula profesional desde el dashboard.
+          </p>
+        </div>
+      </motion.div>
+
+      <motion.a
+        href="https://doc-app-anex.vercel.app/"
+        target="_blank"
+        rel="noreferrer"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+        className="inline-flex items-center justify-center gap-2 w-full bg-[#C9A227] text-black font-bold py-4 rounded-2xl hover:bg-[#C9A227]/90 transition-colors duration-200 text-sm shadow-lg shadow-[#C9A227]/20"
+      >
+        Ir al Dashboard
+        <ExternalLink className="w-4 h-4" aria-hidden="true" />
+      </motion.a>
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.7 }}
+        className="mt-4"
+      >
+        <Link to="/pricing" className="text-gray-600 hover:text-gray-400 text-xs transition-colors">
+          Volver a Planes
+        </Link>
+      </motion.div>
     </div>
   );
 }
@@ -468,8 +679,10 @@ export function CheckoutPage() {
 
   const planParam = searchParams.get("plan") as PlanId | null;
   const initialPlan: PlanId = planParam && planParam in PLANS ? planParam : "platino";
+  // Stripe redirects here with ?payment=success after checkout.session.completed
+  const paymentSuccess = searchParams.get("payment") === "success";
 
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(paymentSuccess ? 3 : 0);
   const [direction, setDirection] = useState(1);
   const [selectedPlan, setSelectedPlan] = useState<PlanId>(initialPlan);
   const [billing, setBilling] = useState<Billing>("monthly");
@@ -481,13 +694,11 @@ export function CheckoutPage() {
     id_tipo_doctor: "",
   });
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [apiError, setApiError] = useState("");
   const [tiposDoctor, setTiposDoctor] = useState<TipoDoctor[]>([]);
   const [loadingTipos, setLoadingTipos] = useState(true);
 
   useEffect(() => {
-    fetch("https://docapp-anex-production.up.railway.app/api/tipo-doctor")
+    fetch(`${API}/api/tipo-doctor`)
       .then((res) => res.json())
       .then((data) => setTiposDoctor(Array.isArray(data) ? data : []))
       .catch(() => setTiposDoctor([]))
@@ -497,13 +708,12 @@ export function CheckoutPage() {
   const goForward = () => {
     setDirection(1);
     setErrors({});
-    setStep((s) => Math.min(s + 1, 1));
+    setStep((s) => Math.min(s + 1, 3));
   };
 
   const goBack = () => {
     setDirection(-1);
     setErrors({});
-    setApiError("");
     setStep((s) => Math.max(s - 1, 0));
   };
 
@@ -518,34 +728,9 @@ export function CheckoutPage() {
     return Object.keys(e).length === 0;
   };
 
-  const handleAccountContinue = async () => {
-    if (!validateAccount()) return;
-    setIsProcessing(true);
-    setApiError("");
-    try {
-      const res = await fetch(
-        "https://docapp-anex-production.up.railway.app/api/auth/register",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            nombre: account.nombre,
-            apellido: account.apellido,
-            email: account.email,
-            telefono: account.telefono,
-            id_tipo_doctor: account.id_tipo_doctor,
-            plan: selectedPlan.toUpperCase(),
-            billing_cycle: billing,
-          }),
-        }
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? "Error al crear la cuenta");
-      window.location.href = data.checkoutUrl;
-    } catch (err) {
-      setApiError(err instanceof Error ? err.message : "Ocurrió un error. Intenta de nuevo.");
-      setIsProcessing(false);
-    }
+  // Step 1: local validation only — no API call; registration happens via webhook after payment
+  const handleAccountContinue = () => {
+    if (validateAccount()) goForward();
   };
 
   const variants = {
@@ -554,9 +739,11 @@ export function CheckoutPage() {
     exit: (dir: number) => ({ x: dir * -48, opacity: 0 }),
   };
 
+  const showSidebar = step < 3;
+
   return (
     <div className="min-h-screen bg-black">
-      {/* Minimal header */}
+      {/* Header */}
       <header className="border-b border-white/10 bg-black/95 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Link to="/" aria-label="Med-Core — Ir al inicio">
@@ -620,9 +807,7 @@ export function CheckoutPage() {
 
       {/* Content */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-20">
-        <div
-          className="grid gap-10 lg:grid-cols-[1fr_360px]"
-        >
+        <div className={`grid gap-10 ${showSidebar ? "lg:grid-cols-[1fr_360px]" : ""}`}>
           <div>
             <AnimatePresence custom={direction} mode="wait">
               <motion.div
@@ -648,21 +833,30 @@ export function CheckoutPage() {
                     account={account}
                     setAccount={setAccount}
                     errors={errors}
-                    apiError={apiError}
-                    isProcessing={isProcessing}
                     tiposDoctor={tiposDoctor}
                     loadingTipos={loadingTipos}
                     onContinue={handleAccountContinue}
                     onBack={goBack}
                   />
                 )}
+                {step === 2 && (
+                  <StepPayment
+                    account={account}
+                    planId={selectedPlan}
+                    billing={billing}
+                    onBack={goBack}
+                  />
+                )}
+                {step === 3 && <StepSuccess />}
               </motion.div>
             </AnimatePresence>
           </div>
 
-          <div className="hidden lg:block">
-            <OrderSummary planId={selectedPlan} billing={billing} />
-          </div>
+          {showSidebar && (
+            <div className="hidden lg:block">
+              <OrderSummary planId={selectedPlan} billing={billing} />
+            </div>
+          )}
         </div>
       </div>
     </div>
